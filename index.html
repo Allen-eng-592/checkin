@@ -72,7 +72,7 @@
   // 你的 LIFF ID
   const LIFF_ID = "2008627576-zOEQAV47";
 
-  // 你的 Google Apps Script Web App URL（新版）
+  // 你的 Google Apps Script Web App URL
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqUil4R7C8HxzAXAgdw88eA2bserMAOxywoZtYhlg4_-Dioi44B6OGNaWo9jGv5MYG2A/exec";
 
   async function main() {
@@ -107,7 +107,7 @@
     }
   }
 
-  async function sendCheckin(profile) {
+  function sendCheckin(profile) {
     const statusEl = document.getElementById("statusMsg");
     const btn = document.getElementById("btnCheckin");
 
@@ -120,25 +120,35 @@
       pictureUrl: profile.pictureUrl,
       source: "公司打卡"
     };
+    const json = JSON.stringify(body);
 
-    try {
-      await fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors", // 避免 CORS 預檢
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(body)
-      });
+    let sent = false;
 
-      // no-cors 拿不到回應，只要沒丟錯就當成功
-      statusEl.innerText = "打卡成功！";
-      alert("打卡成功！");
-
-    } catch (err) {
-      console.error(err);
-      statusEl.innerText = "打卡失敗：" + err;
-      alert("打卡失敗：" + err);
-      btn.disabled = false;
+    // 1️⃣ 優先用 sendBeacon（不會有 CORS 錯誤）
+    if (navigator.sendBeacon) {
+      try {
+        const blob = new Blob([json], { type: "text/plain;charset=utf-8" });
+        sent = navigator.sendBeacon(SCRIPT_URL, blob);
+      } catch(e) {
+        console.error("sendBeacon error:", e);
+      }
     }
+
+    // 2️⃣ 若 sendBeacon 不支援，再用 fetch no-cors 當備援
+    if (!sent) {
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: json
+      }).catch(e => {
+        console.error("fetch error:", e);
+      });
+    }
+
+    // 不管瀏覽器怎麼報錯，都當作已送出，交由後台確認
+    statusEl.innerText = "打卡資料已送出，請稍後在後台確認。";
+    alert("打卡資料已送出！");
   }
 
   main();
