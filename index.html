@@ -1,11 +1,138 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <title>Checkin Page</title>
+  <meta charset="UTF-8"/>
+  <title>LINE 打卡系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    body {
+      text-align: center;
+      background: #f5f5f5;
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .card {
+      margin: 40px auto;
+      max-width: 420px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-top: 10px;
+      border: 3px solid #06c755;
+    }
+    .btn {
+      background: #06c755;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 30px;
+      font-size: 18px;
+      margin-top: 20px;
+      cursor: pointer;
+      width: 80%;
+    }
+    .btn:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    #statusMsg {
+      margin-top: 20px;
+      color: #555;
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Checkin System Placeholder</h1>
-  <p>網站部署成功！回到 LINE Developers 建立 LIFF。</p>
+  <div class="card">
+    <h2>LINE 打卡系統</h2>
+    <p>取得 LINE 資料後即可打卡</p>
+
+    <div id="profileArea" style="display:none;">
+      <img id="avatar" class="avatar"/>
+      <h3 id="username"></h3>
+    </div>
+
+    <button id="btnCheckin" class="btn" disabled>開始打卡</button>
+
+    <p id="statusMsg">初始化中...</p>
+  </div>
+
+<script>
+  // ← 已替換成你的 LIFF ID
+  const LIFF_ID = "2008627576-zOEQAV47";
+
+  // ← 已替換成你的 Script URL
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwV9rP9DaGNS7TILfv7ZVFlv3n5ism2sgU2TL81FideX44G98Gx4WK93E7q6DewzcUn_A/exec";
+
+  async function main() {
+    document.getElementById("statusMsg").innerText = "正在初始化 LIFF...";
+
+    try {
+      await liff.init({ liffId: LIFF_ID });
+
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+
+      const profile = await liff.getProfile();
+
+      // 顯示頭像與名稱
+      document.getElementById("avatar").src = profile.pictureUrl;
+      document.getElementById("username").innerText = profile.displayName;
+      document.getElementById("profileArea").style.display = "block";
+
+      // 啟用打卡按鈕
+      const btn = document.getElementById("btnCheckin");
+      btn.disabled = false;
+
+      btn.onclick = () => sendCheckin(profile);
+
+      document.getElementById("statusMsg").innerText = "請按下「開始打卡」。";
+
+    } catch (err) {
+      document.getElementById("statusMsg").innerText = "LIFF 初始化錯誤：" + err;
+    }
+  }
+
+  async function sendCheckin(profile) {
+    document.getElementById("statusMsg").innerText = "資料送出中...";
+
+    const body = {
+      userId: profile.userId,
+      name: profile.displayName,
+      pictureUrl: profile.pictureUrl,
+      source: "公司打卡"
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      document.getElementById("statusMsg").innerText = "打卡成功！";
+      alert("打卡成功！");
+
+    } catch (err) {
+      document.getElementById("statusMsg").innerText = "打卡失敗：" + err;
+      alert("打卡失敗：" + err);
+    }
+  }
+
+  main();
+</script>
+
 </body>
 </html>
