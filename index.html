@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <title>LINE 打卡系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
   <style>
@@ -58,7 +59,7 @@
     <p>取得 LINE 資料後即可打卡</p>
 
     <div id="profileArea" style="display:none;">
-      <img id="avatar" class="avatar"/>
+      <img id="avatar" class="avatar" alt="avatar"/>
       <h3 id="username"></h3>
     </div>
 
@@ -68,14 +69,15 @@
   </div>
 
 <script>
-  // ← 已替換成你的 LIFF ID
+  // 你的 LIFF ID
   const LIFF_ID = "2008627576-zOEQAV47";
 
-  // ← 已替換成你的 Script URL
+  // 你的 Google Apps Script Web App URL
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwV9rP9DaGNS7TILfv7ZVFlv3n5ism2sgU2TL81FideX44G98Gx4WK93E7q6DewzcUn_A/exec";
 
   async function main() {
-    document.getElementById("statusMsg").innerText = "正在初始化 LIFF...";
+    const statusEl = document.getElementById("statusMsg");
+    statusEl.innerText = "正在初始化 LIFF...";
 
     try {
       await liff.init({ liffId: LIFF_ID });
@@ -95,18 +97,22 @@
       // 啟用打卡按鈕
       const btn = document.getElementById("btnCheckin");
       btn.disabled = false;
-
       btn.onclick = () => sendCheckin(profile);
 
-      document.getElementById("statusMsg").innerText = "請按下「開始打卡」。";
+      statusEl.innerText = "請按下「開始打卡」。";
 
     } catch (err) {
-      document.getElementById("statusMsg").innerText = "LIFF 初始化錯誤：" + err;
+      console.error(err);
+      statusEl.innerText = "LIFF 初始化錯誤：" + err;
     }
   }
 
   async function sendCheckin(profile) {
-    document.getElementById("statusMsg").innerText = "資料送出中...";
+    const statusEl = document.getElementById("statusMsg");
+    const btn = document.getElementById("btnCheckin");
+
+    statusEl.innerText = "資料送出中...";
+    btn.disabled = true;
 
     const body = {
       userId: profile.userId,
@@ -118,16 +124,19 @@
     try {
       await fetch(SCRIPT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // 用 text/plain 避免 CORS 預檢
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(body)
       });
 
-      document.getElementById("statusMsg").innerText = "打卡成功！";
+      statusEl.innerText = "打卡成功！";
       alert("打卡成功！");
 
     } catch (err) {
-      document.getElementById("statusMsg").innerText = "打卡失敗：" + err;
+      console.error(err);
+      statusEl.innerText = "打卡失敗：" + err;
       alert("打卡失敗：" + err);
+      btn.disabled = false;
     }
   }
 
