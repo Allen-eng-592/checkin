@@ -62,6 +62,10 @@
 <script>
   const LIFF_ID = "2008627576-zOEQAV47";
 
+  // ⭐ 你的 Apps Script Web App URL（這一行非常重要）
+  const SCRIPT_URL =
+    "https://script.google.com/macros/s/AKfycbx5rys19eqt7xni-aTfM_EGwXIDBEtGFiDH4q4aKYjI6HRKQlwPIHcJvsoustLe02pS8A/exec"; 
+  
   let profileData = null;
 
   async function start() {
@@ -92,11 +96,25 @@
       return;
     }
 
-    alert(
-      "打卡成功！\n\n" +
-      "LINE 名稱：" + profileData.displayName + "\n" +
-      "輸入姓名：" + name
-    );
+    const payload = {
+      userId: profileData.userId,
+      lineName: profileData.displayName,
+      inputName: name,
+      pictureUrl: profileData.pictureUrl,
+      source: "LINE 打卡"
+    };
+
+    // ⭐ 真正送資料到 Apps Script
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    alert("打卡完成！");
   }
 
   start();
