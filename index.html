@@ -2,33 +2,104 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>LIFF 測試</title>
+  <title>LINE 打卡</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 30px;
+    }
+    .card {
+      background: #fff;
+      max-width: 360px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.1);
+    }
+    img {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      margin-top: 10px;
+    }
+    input {
+      width: 90%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+    button {
+      width: 95%;
+      padding: 12px;
+      font-size: 18px;
+      margin-top: 15px;
+      background: #06c755;
+      color: white;
+      border: none;
+      border-radius: 25px;
+    }
+  </style>
 </head>
+
 <body>
-  <h2 id="msg">載入中...</h2>
+  <div class="card">
+    <h2>LINE 打卡</h2>
+    <p id="status">載入中...</p>
 
-  <script>
-    const LIFF_ID = "2008627576-zOEQAV47";
+    <div id="profile" style="display:none;">
+      <img id="avatar">
+      <h3 id="lineName"></h3>
 
-    async function start() {
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
-        const profile = await liff.getProfile();
-        document.getElementById("msg").innerText =
-          "登入成功：" + profile.displayName;
-      } catch (e) {
-        document.getElementById("msg").innerText =
-          "錯誤：" + e;
+      <input id="inputName" placeholder="請輸入姓名（必填）">
+      <button onclick="checkin()">打卡</button>
+    </div>
+  </div>
+
+<script>
+  const LIFF_ID = "2008627576-zOEQAV47";
+
+  let profileData = null;
+
+  async function start() {
+    try {
+      await liff.init({ liffId: LIFF_ID });
+
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
       }
+
+      profileData = await liff.getProfile();
+
+      document.getElementById("avatar").src = profileData.pictureUrl;
+      document.getElementById("lineName").innerText = profileData.displayName;
+      document.getElementById("profile").style.display = "block";
+      document.getElementById("status").innerText = "請輸入姓名後打卡";
+
+    } catch (e) {
+      document.getElementById("status").innerText = "錯誤：" + e;
+    }
+  }
+
+  function checkin() {
+    const name = document.getElementById("inputName").value.trim();
+    if (!name) {
+      alert("請輸入姓名");
+      return;
     }
 
-    start();
-  </script>
+    alert(
+      "打卡成功！\n\n" +
+      "LINE 名稱：" + profileData.displayName + "\n" +
+      "輸入姓名：" + name
+    );
+  }
+
+  start();
+</script>
 </body>
 </html>
