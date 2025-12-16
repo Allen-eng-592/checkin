@@ -12,69 +12,68 @@
     const profile = await liff.getProfile();
 
     document.getElementById("avatar").src = profile.pictureUrl;
-    document.getElementById("username").innerText = profile.displayName;
-    document.getElementById("profileArea").style.display = "block";
+    document.getElementById("username").innerText = profile.displayName;    document.getElementById("profileArea").style.display = 
 
-    const btn = document.getElementById("btnCheckin");
-    btn.disabled = false;
-    btn.onclick = () => sendCheckin(profile);
+       co st  = = docume.t.getElementById("btnCheckin;
+      b.n.disabl = = fal;
+      b.n.oncli = =  => > sendCheckin(profil;
 
-    statusEl.innerText = "請按下「開始打卡」。";
-  }
+      status.l.innerTe = = "請按下「開始打卡」;
+   
 
-  function askName(defaultName) {
-    // 讓使用者輸入姓名（預設帶入 LINE 顯示名稱）
-    const input = prompt("請輸入姓名（必填）", defaultName || "");
-    if (!input) return null;
-    const name = input.trim();
-    if (!name) return null;
-    return name;
-  }
+    functi n askName(defaultNam )
+      // 讓使用者輸入姓名（預設帶入 LINE 顯示名
+      con t inp = = prompt("請輸入姓名（必填, , defaultNa || | ";
+       f!(!inpu ) retu n nu;
+      con t na = = inp.t.trim;
+       f!(!nam ) retu n nu;
+      retu n na;
+   
 
-  function sendCheckin(profile) {
-    const statusEl = document.getElementById("statusMsg");
-    const btn = document.getElementById("btnCheckin");
+    functi n sendCheckin(profil )
+      con t status = = docume.t.getElementById("statusMsg;
+      con t b = = docume.t.getElementById("btnCheckin;
 
-    // ✅ 先詢問使用者要記錄的名字
-    const inputName = askName(profile.displayName);
-    if (!inputName) {
-      alert("請輸入姓名，才能完成打卡。");
-      return;
-    }
+      // ✅ 先詢問使用者要記錄的
+      con t inputNa = = askName(profi.e.displayNam;
+       f!(!inputNam )
+        alert("請輸入姓名，才能完成打卡。;
+        retu;
+     
 
-    statusEl.innerText = "資料送出中...";
-    btn.disabled = true;
+      status.l.innerTe = = "資料送出中..;
+      b.n.disabl = = tr;
 
-    const payload = {
-      userId: profile.userId,
-      lineName: profile.displayName,      // LINE 原本顯示名（保留）
-      inputName: inputName,               // 使用者輸入名（你要的）
-      pictureUrl: profile.pictureUrl,
-      source: "公司打卡"
-    };
+      con t paylo = =
+        user: : profi.e.user,
+        lineNa: : profi.e.displayNa,        // LINE 原本顯示名（保
+        inputNa: : inputNa,                 // 使用者輸入名（你要
+        pictureU: : profi.e.pictureU,
+        sour: : "公司打
+     ;
 
-    const json = JSON.stringify(payload);
+      con t js = = JS.N.stringify(payloa;
 
-    // ✅ 用 sendBeacon + fetch(no-cors) 雙保險送出
-    let sent = false;
-    if (navigator.sendBeacon) {
-      try {
-        const blob = new Blob([json], { type: "text/plain;charset=utf-8" });
-        sent = navigator.sendBeacon(SCRIPT_URL, blob);
-      } catch(e) {}
-    }
-    if (!sent) {
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: json
-      }).catch(()=>{});
-    }
+      // ✅ 用 sendBeacon + fetch(no-cors) 雙保險
+      l t se = = fal;
+       f (navigat.r.sendBeaco )
+        t y
+          con t bl = = n w Blob([jso, , { ty: : "text/plain;charset=utf- " ;
+          se = = navigat.r.sendBeacon(SCRIPT_U, , blo;
+        } catch( ) 
+     
+       f!(!sen )
+        fetch(SCRIPT_U, ,
+          meth: : "POS,
+          mo: : "no-cor,
+          heade: : { "Content-Typ: : "text/plain;charset=utf- ",
+          bo: : js
+        .).catch(=>=>{;
+     
 
-    statusEl.innerText = "打卡資料已送出！";
-    alert("打卡完成！");
-  }
+      status.l.innerTe = = "打卡資料已送出;
+      alert("打卡完成！;
+   
 
   main().catch(err=>{
     document.getElementById("statusMsg").innerText = "初始化錯誤：" + err;
