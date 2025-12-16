@@ -1,100 +1,194 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>LINE 打卡</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body {
       font-family: "Microsoft JhengHei", sans-serif;
       background: #f5f5f5;
       text-align: center;
-      padding: 30px;
+      padding: 28px 16px;
+      margin: 0;
     }
     .card {
       background: #fff;
-      max-width: 360px;
-      margin: auto;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,.1);
+      max-width: 380px;
+      margin: 0 auto;
+      padding: 18px 16px 22px;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.10);
     }
+    h2 { margin: 8px 0 6px; }
+    #status { color: #333; margin: 10px 0 6px; }
+    .muted { color: #777; font-size: 14px; margin-top: 6px; }
+    .row { margin-top: 14px; }
     img {
-      width: 96px;
-      height: 96px;
+      width: 92px;
+      height: 92px;
       border-radius: 50%;
       margin-top: 10px;
+      object-fit: cover;
+      border: 3px solid #06c755;
     }
     input {
-      width: 90%;
-      padding: 10px;
+      width: 92%;
+      padding: 11px 12px;
       font-size: 16px;
-      margin-top: 15px;
+      margin-top: 10px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      outline: none;
     }
+    input:focus { border-color: #06c755; }
     button {
       width: 95%;
       padding: 12px;
       font-size: 18px;
-      margin-top: 15px;
+      margin-top: 14px;
       background: #06c755;
       color: white;
       border: none;
-      border-radius: 25px;
+      border-radius: 26px;
+      cursor: pointer;
     }
+    button:disabled {
+      background: #a9a9a9;
+      cursor: not-allowed;
+    }
+    .ok { color: #06c755; }
+    .warn { color: #c77a00; }
+    .err { color: #c0392b; }
   </style>
 </head>
 
 <body>
   <div class="card">
     <h2>LINE 打卡</h2>
-    <p id="status">載入中...</p>
+    <div id="status">載入中...</div>
+    <div class="muted" id="subStatus"></div>
 
     <div id="profile" style="display:none;">
-      <img id="avatar">
-      <h3 id="lineName"></h3>
+      <img id="avatar" alt="avatar" />
+      <div class="row">
+        <div style="font-weight:700; font-size:18px;" id="lineName"></div>
+        <div class="muted">（LINE 顯示名稱）</div>
+      </div>
 
-      <input id="inputName" placeholder="請輸入姓名（必填）">
-      <button onclick="checkin()">打卡</button>
+      <div class="row">
+        <input id="inputName" placeholder="請輸入姓名（必填）" autocomplete="name" />
+        <button id="btnCheckin" onclick="checkin()">打卡</button>
+        <div class="muted">打卡完成後會自動關閉頁面</div>
+      </div>
     </div>
   </div>
 
+  <!-- 隱藏 iframe：表單送出不跳頁（最穩、免 CORS） -->
+  <iframe name="hidden_iframe" style="display:none;"></iframe>
+
 <script>
+  // ====== 你需要確認的兩個常數 ======
   const LIFF_ID = "2008627576-zOEQAV47";
 
-  // ⭐ 你的 Apps Script Web App URL（這一行非常重要）
+  // 你的 Apps Script Web App URL（exec）
   const SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbx5rys19eqt7xni-aTfM_EGwXIDBEtGFiDH4q4aKYjI6HRKQlwPIHcJvsoustLe02pS8A/exec";
+    "https://script.google.com/macros/s/AKfycbxqUil4R7C8HxzAXAgdw88eA2bserMAOxywoZtYhlg4_-Dioi44B6OGNaWo9jGv5MYG2A/exec";
+
+  // localStorage key（記住上次輸入姓名）
+  const LS_NAME_KEY = "checkin_input_name_v1";
 
   let profileData = null;
+  let submitting = false;
+
+  function setStatus(text, cls) {
+    const el = document.getElementById("status");
+    el.className = cls || "";
+    el.innerText = text;
+  }
+  function setSub(text, cls) {
+    const el = document.getElementById("subStatus");
+    el.className = cls || "muted";
+    el.innerText = text || "";
+  }
 
   async function start() {
     try {
+      setStatus("初始化中...");
+      setSub("");
+
       await liff.init({ liffId: LIFF_ID });
 
+      // 必須在 LINE / LIFF 環境才有最佳體驗
       if (!liff.isLoggedIn()) {
+        setStatus("前往 LINE 登入中...");
         liff.login();
         return;
       }
 
       profileData = await liff.getProfile();
 
-      document.getElementById("avatar").src = profileData.pictureUrl;
-      document.getElementById("lineName").innerText = profileData.displayName;
+      document.getElementById("avatar").src = profileData.pictureUrl || "";
+      document.getElementById("lineName").innerText = profileData.displayName || "";
       document.getElementById("profile").style.display = "block";
-      document.getElementById("status").innerText = "請輸入姓名後打卡";
+
+      // 自動帶入上次輸入姓名（可改）
+      const saved = localStorage.getItem(LS_NAME_KEY) || "";
+      const input = document.getElementById("inputName");
+      if (saved) input.value = saved;
+
+      setStatus("請輸入姓名後打卡");
+      setSub(liff.isInClient() ? "（在 LINE 內開啟）" : "（目前不是 LINE 內建瀏覽器，打卡後無法自動關閉）", liff.isInClient() ? "muted" : "warn");
 
     } catch (e) {
-      document.getElementById("status").innerText = "錯誤：" + e;
+      console.error(e);
+      setStatus("初始化失敗", "err");
+      setSub(String(e), "err");
     }
   }
 
+  function postByForm(payloadObj) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = SCRIPT_URL;
+    form.target = "hidden_iframe";
+
+    // Apps Script 用 e.parameter.payload 取
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "payload";
+    input.value = JSON.stringify(payloadObj);
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  }
+
   function checkin() {
-    const name = document.getElementById("inputName").value.trim();
-    if (!name) {
-      alert("請輸入姓名");
+    if (submitting) return;
+
+    const btn = document.getElementById("btnCheckin");
+    const inputNameEl = document.getElementById("inputName");
+    const name = (inputNameEl.value || "").trim();
+
+    if (!profileData) {
+      alert("尚未取得 LINE 資料，請重新開啟頁面");
       return;
     }
+    if (!name) {
+      alert("請輸入姓名");
+      inputNameEl.focus();
+      return;
+    }
+
+    // 記住輸入姓名
+    localStorage.setItem(LS_NAME_KEY, name);
+
+    // 防重複點擊
+    submitting = true;
+    btn.disabled = true;
 
     const payload = {
       userId: profileData.userId,
@@ -104,17 +198,36 @@
       source: "LINE 打卡"
     };
 
-    // ⭐ 真正送資料到 Apps Script
-    fetch(SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      },
-      body: JSON.stringify(payload)
-    });
+    // ✅ 送出（不靠 fetch / CORS）
+    try {
+      setStatus("打卡送出中...", "warn");
+      setSub("請稍候，完成後將自動關閉。");
+      postByForm(payload);
+    } catch (e) {
+      console.error(e);
+      setStatus("送出失敗", "err");
+      setSub(String(e), "err");
+      submitting = false;
+      btn.disabled = false;
+      return;
+    }
 
-    alert("打卡完成！");
+    // ✅ 這裡無法得知伺服器回應（表單送出/iframe），但可保證 request 會送到 doPost
+    // 給使用者一個明確回饋，再關閉
+    setTimeout(() => {
+      setStatus("打卡完成 ✅", "ok");
+      setSub("即將關閉...");
+
+      // 1.2 秒後關閉（只在 LINE 內有效）
+      setTimeout(() => {
+        if (window.liff && liff.isInClient()) {
+          liff.closeWindow();
+        } else {
+          alert("打卡完成！你可以關閉此頁面。");
+        }
+      }, 1200);
+
+    }, 600);
   }
 
   start();
