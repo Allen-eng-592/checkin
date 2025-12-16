@@ -1,82 +1,34 @@
-<script>
-  const LIFF_ID = "2008627576-zOEQAV47";
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqUil4R7C8HxzAXAgdw88eA2bserMAOxywoZtYhlg4_-Dioi44B6OGNaWo9jGv5MYG2A/exec";
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>LIFF 測試</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <h2 id="msg">載入中...</h2>
 
-  async function main() {
-    const statusEl = document.getElementById("statusMsg");
-    statusEl.innerText = "正在初始化 LIFF...";
+  <script>
+    const LIFF_ID = "2008627576-zOEQAV47";
 
-    await liff.init({ liffId: LIFF_ID });
-    if (!liff.isLoggedIn()) { liff.login(); return; }
-
-    const profile = await liff.getProfile();
-
-    document.getElementById("avatar").src = profile.pictureUrl;
-    document.getElementById("username").innerText = profile.displayName;
-    document.getElementById("profileArea").style.display = "block";
-
-    const btn = document.getElementById("btnCheckin");
-    btn.disabled = false;
-    btn.onclick = () => sendCheckin(profile);
-
-    statusEl.innerText = "請按下「開始打卡」。";
-  }
-
-  function askName(defaultName) {
-    // 讓使用者輸入姓名（預設帶入 LINE 顯示名稱）
-    const input = prompt("請輸入姓名（必填）", defaultName || "");
-    if (!input) return null;
-    const name = input.trim();
-    if (!name) return null;
-    return name;
-  }
-
-  function sendCheckin(profile) {
-    const statusEl = document.getElementById("statusMsg");
-    const btn = document.getElementById("btnCheckin");
-
-    // ✅ 先詢問使用者要記錄的名字
-    const inputName = askName(profile.displayName);
-    if (!inputName) {
-      alert("請輸入姓名，才能完成打卡。");
-      return;
-    }
-
-    statusEl.innerText = "資料送出中...";
-    btn.disabled = true;
-
-    const payload = {
-      userId: profile.userId,
-      lineName: profile.displayName,      // LINE 原本顯示名（保留）
-      inputName: inputName,               // 使用者輸入名（你要的）
-      pictureUrl: profile.pictureUrl,
-      source: "公司打卡"
-    };
-
-    const json = JSON.stringify(payload);
-
-    // ✅ 用 sendBeacon + fetch(no-cors) 雙保險送出
-    let sent = false;
-    if (navigator.sendBeacon) {
+    async function start() {
       try {
-        const blob = new Blob([json], { type: "text/plain;charset=utf-8" });
-        sent = navigator.sendBeacon(SCRIPT_URL, blob);
-      } catch(e) {}
-    }
-    if (!sent) {
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: json
-      }).catch(()=>{});
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        const profile = await liff.getProfile();
+        document.getElementById("msg").innerText =
+          "登入成功：" + profile.displayName;
+      } catch (e) {
+        document.getElementById("msg").innerText =
+          "錯誤：" + e;
+      }
     }
 
-    statusEl.innerText = "打卡資料已送出！";
-    alert("打卡完成！");
-  }
-
-  main().catch(err=>{
-    document.getElementById("statusMsg").innerText = "初始化錯誤：" + err;
-  });
-</script>
+    start();
+  </script>
+</body>
+</html>
